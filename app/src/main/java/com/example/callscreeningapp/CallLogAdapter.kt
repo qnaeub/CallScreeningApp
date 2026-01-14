@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.TextView
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
@@ -15,6 +16,38 @@ import androidx.recyclerview.widget.RecyclerView
 // List -> MutableList로 변경
 class CallLogAdapter(private val items: MutableList<CallLogItem>) :
     RecyclerView.Adapter<CallLogAdapter.CallLogViewHolder>() {
+
+    inner class CallLogViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val tvPhoneNumber: TextView = itemView.findViewById(R.id.tv_phone_number)
+        val tvDate: TextView = itemView.findViewById(R.id.tv_date)
+        val btnDelete: ImageButton = itemView.findViewById(R.id.btn_delete)
+        // 태그 뷰 찾기
+        val tvSpamTag: TextView = itemView.findViewById(R.id.tv_spam_tag)
+
+        fun bind(item: CallLogItem) {
+            tvPhoneNumber.text = item.phoneNumber
+            tvDate.text = item.date
+
+            // spamInfo가 있으면 태그 보이기, 없으면 숨기기
+            if (!item.spamInfo.isNullOrEmpty()) {
+                tvSpamTag.text = item.spamInfo
+                tvSpamTag.visibility = View.VISIBLE
+            } else {
+                tvSpamTag.visibility = View.GONE
+            }
+
+            // isSpam 값에 따라 색 결정
+            if (item.isSpam) {
+                // 스팸일 때: 빨간색 (#E53935)
+                tvPhoneNumber.setTextColor(Color.parseColor("#E53935"))
+                tvSpamTag.setTextColor(Color.parseColor("#E53935"))
+            } else {
+                // 스팸이 아닐 때: 검은색/진회색 (#333333)
+                tvPhoneNumber.setTextColor(Color.parseColor("#333333"))
+                tvSpamTag.setTextColor(Color.parseColor("#333333"))
+            }
+        }
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CallLogViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -36,7 +69,7 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
             if (currentPos != RecyclerView.NO_POSITION) { // 위치가 유효하다면
                 items.removeAt(currentPos)           // 데이터 삭제
                 notifyItemRemoved(currentPos)        // "이 자리 아이템 사라졌어!" 알림
-                notifyItemRangeChanged(currentPos, items.size) // "나머지 순서 다시 매겨!" 알림
+                //notifyItemRangeChanged(currentPos, items.size) // "나머지 순서 다시 매겨!" 알림
             }
         }
 
@@ -149,28 +182,4 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
     }
 
     override fun getItemCount(): Int = items.size
-
-    class CallLogViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        // 기존 뷰들
-        private val tvPhoneNumber: TextView = itemView.findViewById(R.id.tvPhoneNumber)
-        private val tvSpamTag: TextView = itemView.findViewById(R.id.tvSpamTag)
-        private val tvDate: TextView = itemView.findViewById(R.id.tvDate)
-
-        // 삭제 버튼(X) 찾아오기
-        val btnDelete: View = itemView.findViewById(R.id.ivStatus)
-
-        fun bind(item: CallLogItem) {
-            tvPhoneNumber.text = item.phoneNumber
-            tvDate.text = item.date
-            tvSpamTag.text = item.spamTag
-
-            if (item.isSpam) {
-                tvSpamTag.setTextColor(Color.parseColor("#D32F2F"))
-                tvSpamTag.setBackgroundResource(R.drawable.bg_tag_spam)
-            } else {
-                tvSpamTag.setTextColor(Color.parseColor("#388E3C"))
-                tvSpamTag.setBackgroundColor(Color.TRANSPARENT)
-            }
-        }
-    }
 }
