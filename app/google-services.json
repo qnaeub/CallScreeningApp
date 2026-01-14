@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "809775588000",
+    "project_id": "callscreeningapp",
+    "storage_bucket": "callscreeningapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:809775588000:android:981764fd5784a068679fc5",
+        "android_client_info": {
+          "package_name": "com.example.callscreeningapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8Fk_pxUa-fABJV-10ZL0lzOCAMO6nlqU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

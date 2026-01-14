@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -46,6 +47,9 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3") // 코루틴
     implementation("org.jsoup:jsoup:1.16.1") // 웹 크롤링용 라이브러리 (Jsoup)
+    implementation(platform("com.google.firebase:firebase-bom:32.7.2")) // Firebase BOM (버전 관리용 트럭)
+    implementation("com.google.firebase:firebase-firestore")    // Firestore (데이터베이스)
+    implementation("com.google.firebase:firebase-analytics")    // Analytics (기본)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
