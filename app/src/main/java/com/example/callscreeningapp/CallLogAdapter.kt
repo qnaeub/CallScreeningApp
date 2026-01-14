@@ -54,8 +54,9 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
 
             // 5. 팝업창 내부의 요소들 찾기 (findViewById)
             val tvPopupPhone = dialogView.findViewById<TextView>(R.id.tv_phone_number)
-            val btnClose = dialogView.findViewById<Button>(R.id.btn_close)
             val tvPopupTitle = dialogView.findViewById<TextView>(R.id.tv_popup_title)
+            val btnBlock = dialogView.findViewById<Button>(R.id.btn_popup_block)
+            val btnCall = dialogView.findViewById<Button>(R.id.btn_popup_call)
 
             // 6. 데이터 넣기 (클릭한 아이템의 전화번호 표시)
             tvPopupPhone.text = item.phoneNumber
@@ -69,9 +70,21 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
                 tvPopupTitle.setTextColor(Color.parseColor("#388E3C")) // 초록색
             }
 
-            // 7. 닫기 버튼 누르면 팝업 끄기 (dismiss)
-            btnClose.setOnClickListener {
-                mAlertDialog.dismiss()
+            // 7. 차단/통화
+            // [기능 1] 차단 버튼 클릭 시
+            btnBlock.setOnClickListener {
+                // 차단 로직은 나중에 구현하고, 우선 메시지만 띄웁니다.
+                android.widget.Toast.makeText(holder.itemView.context, "${item.phoneNumber} 번호를 차단했습니다.", android.widget.Toast.LENGTH_SHORT).show()
+                mAlertDialog.dismiss() // 팝업 닫기
+            }
+
+            // [기능 2] 통화 버튼 클릭 시 (실제 전화 앱으로 이동)
+            btnCall.setOnClickListener {
+                val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
+                    data = android.net.Uri.parse("tel:${item.phoneNumber}")
+                }
+                holder.itemView.context.startActivity(intent)
+                mAlertDialog.dismiss() // 팝업 닫기
             }
         }
     }
