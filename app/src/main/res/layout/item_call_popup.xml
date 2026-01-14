@@ -34,52 +34,86 @@
             android:textStyle="bold"
             android:gravity="center" />
 
-        <LinearLayout
+        <EditText
+            android:id="@+id/et_spam_reason"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btn_popup_ignore"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:text="무시"
-                android:textSize="12sp"
-                android:backgroundTint="#9E9E9E" />
-
-            <Button
-                android:id="@+id/btn_popup_reject"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:text="거절"
-                android:textSize="12sp"
-                android:backgroundTint="#FF9800" />
-
-            <Button
-                android:id="@+id/btn_popup_block"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="차단"
-                android:textSize="12sp"
-                android:backgroundTint="#E53935" />
-        </LinearLayout>
+            android:layout_marginTop="10dp"
+            android:background="@android:color/white"
+            android:hint="스팸 사유 입력 (선택: 대출, 도박 등)"
+            android:padding="10dp"
+            android:textSize="14sp"
+            android:backgroundTint="#CCCCCC" />
 
         <TextView
             android:id="@+id/tv_spam_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="10dp"
             android:gravity="center"
             android:text="🔍 정보를 검색하고 있습니다..."
             android:textColor="#555555"
             android:textSize="12sp" />
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="5dp">
+
+                <Button
+                    android:id="@+id/btn_popup_ignore"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="무시 (닫기)"
+                    android:textSize="12sp"
+                    android:backgroundTint="#9E9E9E" />
+
+                <Button
+                    android:id="@+id/btn_popup_report"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="신고만 하기"
+                    android:textSize="12sp"
+                    android:backgroundTint="#2196F3" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_popup_reject"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="거절 (끊기)"
+                    android:textSize="12sp"
+                    android:backgroundTint="#FF9800" />
+
+                <Button
+                    android:id="@+id/btn_popup_block"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="차단 및 신고"
+                    android:textSize="12sp"
+                    android:backgroundTint="#E53935" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>

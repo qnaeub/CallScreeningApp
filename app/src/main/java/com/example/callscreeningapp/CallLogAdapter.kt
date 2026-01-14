@@ -5,7 +5,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 import androidx.recyclerview.widget.RecyclerView
 
 // List -> MutableList로 변경
@@ -55,23 +59,49 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
             // 5. 팝업창 내부의 요소들 찾기 (findViewById)
             val tvPopupPhone = dialogView.findViewById<TextView>(R.id.tv_phone_number)
             val tvPopupTitle = dialogView.findViewById<TextView>(R.id.tv_popup_title)
-            val btnIgnore = dialogView.findViewById<Button>(R.id.btn_popup_ignore)
-            val btnReject = dialogView.findViewById<Button>(R.id.btn_popup_reject) // 이걸 '통화' 버튼으로 쓸 겁니다.
-            val btnBlock = dialogView.findViewById<Button>(R.id.btn_popup_block)
+            val etReason = dialogView.findViewById<EditText>(R.id.et_spam_reason)   // 입력칸
 
-            // 6. 데이터 넣기 (클릭한 아이템의 전화번호 표시)
+            val btnIgnore = dialogView.findViewById<Button>(R.id.btn_popup_ignore)
+            val btnReport = dialogView.findViewById<Button>(R.id.btn_popup_report)
+            val btnReject = dialogView.findViewById<Button>(R.id.btn_popup_reject)  // 이걸 '통화' 버튼으로 쓸 겁니다.
+            val btnBlock = dialogView.findViewById<Button>(R.id.btn_popup_block)    // 팝업 요소 찾기
+
+            // 6. 기본 데이터 세팅
             tvPopupPhone.text = item.phoneNumber
 
-            // [UI 변경] 통화 기록 화면에 맞게 버튼 디자인 변경
-            // 7-1. '무시' 버튼 숨기기 (기록 화면에선 필요 없음)
-            btnIgnore.visibility = View.GONE
+            // 7. UI 설정
+            btnIgnore.visibility = View.GONE    // '무시' 버튼 숨기기
 
-            // 7-2. '거절' 버튼을 '통화' 버튼으로 변신시키기
+            etReason.visibility = View.VISIBLE   // 사유 입력칸 보이게 하기
+            btnReport.visibility = View.VISIBLE  // '신고만 하기' 버튼 보이게 하기
+
+            // '거절' -> '통화' 버튼으로 변경
             btnReject.text = "통화"
             btnReject.setBackgroundColor(Color.parseColor("#388E3C")) // 초록색
 
-            // [기능 연결]
-            // 7-3. (구 거절 버튼 -> 현 통화 버튼) 클릭 시 전화 앱 연결
+            // 스팸 여부 UI 표시
+            if (item.isSpam) {
+                tvPopupTitle.text = "스팸 의심 번호 감지!"
+                tvPopupTitle.setTextColor(Color.parseColor("#E53935"))
+            } else {
+                tvPopupTitle.text = "안전한 번호입니다"
+                tvPopupTitle.setTextColor(Color.parseColor("#388E3C"))
+            }
+
+            // 8. [기능 연결]
+            // 8-1. [기능 1] 신고만 하기 버튼 (DB 저장 O, 차단 X)
+            btnReport.setOnClickListener {
+                val inputReason = etReason.text.toString()
+                val finalReason = if (inputReason.isBlank()) "통화 기록에서 신고" else inputReason
+
+                // Firestore 저장 로직 호출
+                saveSpamToFirestore(item.phoneNumber, finalReason)
+
+                android.widget.Toast.makeText(holder.itemView.context, "신고가 접수되었습니다.", android.widget.Toast.LENGTH_SHORT).show()
+                mAlertDialog.dismiss()
+            }
+
+            // 8-2. [기능 2] 통화 버튼 (전화 앱 연결)
             btnReject.setOnClickListener {
                 val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
                     data = android.net.Uri.parse("tel:${item.phoneNumber}")
@@ -80,10 +110,40 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
                 mAlertDialog.dismiss()
             }
 
-            // 7-4. 차단 버튼 클릭 시
+            // 8-3. [기능 3] 차단 및 신고 버튼 (DB 저장 O, 차단 메시지)
             btnBlock.setOnClickListener {
-                android.widget.Toast.makeText(holder.itemView.context, "${item.phoneNumber} 번호를 차단했습니다.", android.widget.Toast.LENGTH_SHORT).show()
+                val inputReason = etReason.text.toString()
+                val finalReason = if (inputReason.isBlank()) "통화 기록에서 차단" else inputReason
+
+                // Firestore 저장 로직 호출
+                saveSpamToFirestore(item.phoneNumber, finalReason)
+
+                android.widget.Toast.makeText(holder.itemView.context, "차단 및 신고 완료", android.widget.Toast.LENGTH_SHORT).show()
                 mAlertDialog.dismiss()
+            }
+        }
+    }
+
+    // [보조 함수] Firestore 저장 코드가 중복되므로 함수로 분리했습니다. (클래스 내부에 추가하세요)
+    private fun saveSpamToFirestore(phoneNumber: String, reason: String) {
+        val db = Firebase.firestore
+        val spamRef = db.collection("spam_numbers").document(phoneNumber)
+
+        spamRef.get().addOnSuccessListener { document ->
+            if (document.exists()) {
+                spamRef.update(
+                    "spam_count", FieldValue.increment(1),
+                    "reasons", FieldValue.arrayUnion(reason),
+                    "last_reported", System.currentTimeMillis()
+                )
+            } else {
+                val data = hashMapOf(
+                    "number" to phoneNumber,
+                    "spam_count" to 1,
+                    "reasons" to arrayListOf(reason),
+                    "last_reported" to System.currentTimeMillis()
+                )
+                spamRef.set(data)
             }
         }
     }

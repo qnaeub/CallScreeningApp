@@ -10,6 +10,37 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // 오버레이 권한 확인 및 요청 코드
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            if (!android.provider.Settings.canDrawOverlays(this)) {
+                // 권한이 없으면 설정 화면으로 이동시킴
+                val intent = android.content.Intent(
+                    android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:$packageName")
+                )
+                startActivityForResult(intent, 1234)
+                android.widget.Toast.makeText(this, "팝업을 띄우려면 '다른 앱 위에 표시' 권한을 허용해주세요.", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+
+        // 기본 스팸 앱 설정 요청 코드
+        val roleManager = getSystemService(ROLE_SERVICE) as android.app.role.RoleManager
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            if (roleManager.isRoleAvailable(android.app.role.RoleManager.ROLE_CALL_SCREENING)) {
+                if (!roleManager.isRoleHeld(android.app.role.RoleManager.ROLE_CALL_SCREENING)) {
+                    val intent = roleManager.createRequestRoleIntent(android.app.role.RoleManager.ROLE_CALL_SCREENING)
+                    startActivityForResult(intent, 1234)
+                }
+            }
+        }
+
+        // 전화 끊기 권한(ANSWER_PHONE_CALLS) 요청
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            if (checkSelfPermission(android.Manifest.permission.ANSWER_PHONE_CALLS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.ANSWER_PHONE_CALLS), 101)
+            }
+        }
+
         // 1. RecyclerView 찾아오기
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
 
