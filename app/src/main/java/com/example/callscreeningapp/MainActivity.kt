@@ -1,46 +1,30 @@
 package com.example.callscreeningapp
 
-import android.app.role.RoleManager
-import android.content.Intent
-import android.os.Build
 import android.os.Bundle
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 
 class MainActivity : AppCompatActivity() {
-
-    private lateinit var requestRoleLauncher: ActivityResultLauncher<Intent>
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // setContentView(R.layout.activity_main) // Assuming a layout will be added later
+        setContentView(R.layout.activity_main)
 
-        requestRoleLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
-                println("Call screening role granted!")
-            } else {
-                println("Call screening role denied.")
-            }
-        }
+        // 1. RecyclerView 찾아오기
+        val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
 
-        checkAndRequestCallScreeningRole()
-    }
+        // 2. 가짜 데이터(Mock Data) 만들기 - 테스트용
+        val dummyList = listOf(
+            CallLogItem("010-9876-5432", "스팸 의심 (대출)", "방금 전", true),
+            CallLogItem("02-1234-5678", "안전 (택배)", "1시간 전", false),
+            CallLogItem("070-1111-2222", "스팸 의심 (보이스피싱)", "어제", true),
+            CallLogItem("031-444-5555", "안전", "2일 전", false),
+            CallLogItem("010-1111-2222", "스팸 의심", "3일 전", true)
+        )
 
-    private fun checkAndRequestCallScreeningRole() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = getSystemService(ROLE_SERVICE) as RoleManager
-            val isCallScreeningApp = roleManager.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING) &&
-                    roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
-
-            if (!isCallScreeningApp) {
-                val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
-                requestRoleLauncher.launch(intent)
-            } else {
-                println("App is already the default call screening app.")
-            }
-        } else {
-            println("CallScreeningService is not available on this Android version.")
-        }
+        // 3. 어댑터 연결하기
+        val adapter = CallLogAdapter(dummyList)
+        recyclerView.adapter = adapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
     }
 }
