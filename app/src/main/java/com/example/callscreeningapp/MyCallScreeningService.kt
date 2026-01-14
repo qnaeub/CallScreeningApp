@@ -2,6 +2,7 @@ package com.example.callscreeningapp
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.os.Build
 import android.provider.Settings
 import android.telecom.Call
 import android.telecom.CallScreeningService
@@ -68,14 +69,29 @@ class MyCallScreeningService : CallScreeningService() {
         serviceScope.launch {
             val searchResult = searchPhoneNumberInfo(phoneNumber) // 아래에 만든 함수 호출
             tvInfo.text = searchResult // 검색 결과로 텍스트 변경
+
+            // 검색 결과가 '광고'나 '스팸'을 포함하면 빨간색으로 강조
+            if (searchResult.contains("광고") || searchResult.contains("스팸")) {
+                tvInfo.setTextColor(android.graphics.Color.RED)
+            }
         }
 
         // 6-1. [무시] 버튼: 팝업만 닫고 전화는 계속 울리게 둠
         val btnIgnore = view.findViewById<Button>(R.id.btn_popup_ignore)
         btnIgnore.setOnClickListener {
-            // 아무 응답도 안 보내면(allow 기본), 전화는 계속 울림
+            val responseBuilder = CallResponse.Builder()
+
+            // 안드로이드 10(API 29) 이상에서만 지원하는 '무음 처리' 기능
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                responseBuilder.setSilenceCall(true) // 벨소리만 뚝 그침
+            }
+
+            // 전화는 끊지 않고(Allow) 그냥 둠
             respondToCall(callDetails, CallResponse.Builder().build())
+
+            // 팝업을 닫음 -> 이제 사용자는 홈 버튼을 누르거나 다른 앱을 쓸 수 있음
             windowManager.removeView(view)
+            Toast.makeText(applicationContext, "벨소리를 껐습니다.", Toast.LENGTH_SHORT).show()
         }
 
         // 6-2. [거절] 버튼: 전화만 딱 끊음 (기록은 남음)
@@ -120,24 +136,26 @@ class MyCallScreeningService : CallScreeningService() {
             // [실제 구현 방법]
             // 구글에 전화번호를 검색해서 제목을 긁어옵니다. (User-Agent 설정 필수)
             // 주의: 너무 많이 요청하면 구글이 차단할 수 있으므로, 실제 앱에선 '더치트'나 스팸 API를 쓰는 게 좋습니다.
-            val url = "https://www.google.com/search?q=$number"
+            val url = "https://www.google.com/search?q=$number+스팸"
             val doc = Jsoup.connect(url)
                 .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                .timeout(5000)  // 5초 타임아웃
                 .get()
 
-            // 검색 결과 중 첫 번째 제목 등을 가져옴 (구조는 구글 마음에 따라 바뀔 수 있음)
-            val title = doc.select("h3").firstOrNull()?.text()
+            // 구글 검색 결과의 텍스트들을 긁어모음 (클래스 이름은 자주 바뀌므로 범용 태그 사용)
+            // 'div' 태그 중 텍스트가 긴 것들 위주로 검사
+            val elements = doc.select("div").filter { it.text().contains("스팸") || it.text().contains("광고") }
 
-            if (title != null) {
-                return@withContext "검색 결과: $title"
+            if (elements.isNotEmpty()) {
+                // 가장 그럴듯한 텍스트 1개를 짧게 잘라서 리턴
+                return@withContext "검색 결과: " + elements.first().text().take(30) + "..."
             } else {
                 return@withContext "검색 결과가 없습니다."
             }
 
         } catch (e: Exception) {
             e.printStackTrace()
-            // 에러 나면 테스트용 가짜 데이터 리턴 (테스트 할 때 편하시라고)
-            return@withContext "스팸 신고가 많은 번호입니다 (대출 권유)"
+            return@withContext "정보를 가져올 수 없습니다."
         }
     }
 
