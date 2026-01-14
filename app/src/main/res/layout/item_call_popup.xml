@@ -41,23 +41,44 @@
             android:orientation="horizontal">
 
             <Button
+                android:id="@+id/btn_popup_ignore"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="무시"
+                android:textSize="12sp"
+                android:backgroundTint="#9E9E9E" />
+
+            <Button
+                android:id="@+id/btn_popup_reject"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="거절"
+                android:textSize="12sp"
+                android:backgroundTint="#FF9800" />
+
+            <Button
                 android:id="@+id/btn_popup_block"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginEnd="5dp"
                 android:text="차단"
-                android:backgroundTint="#555555" />
-
-            <Button
-                android:id="@+id/btn_popup_call"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="5dp"
-                android:text="통화"
-                android:backgroundTint="#388E3C" />
+                android:textSize="12sp"
+                android:backgroundTint="#E53935" />
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_spam_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:text="🔍 정보를 검색하고 있습니다..."
+            android:textColor="#555555"
+            android:textSize="12sp" />
 
     </LinearLayout>
 

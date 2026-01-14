@@ -55,36 +55,35 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
             // 5. 팝업창 내부의 요소들 찾기 (findViewById)
             val tvPopupPhone = dialogView.findViewById<TextView>(R.id.tv_phone_number)
             val tvPopupTitle = dialogView.findViewById<TextView>(R.id.tv_popup_title)
+            val btnIgnore = dialogView.findViewById<Button>(R.id.btn_popup_ignore)
+            val btnReject = dialogView.findViewById<Button>(R.id.btn_popup_reject) // 이걸 '통화' 버튼으로 쓸 겁니다.
             val btnBlock = dialogView.findViewById<Button>(R.id.btn_popup_block)
-            val btnCall = dialogView.findViewById<Button>(R.id.btn_popup_call)
 
             // 6. 데이터 넣기 (클릭한 아이템의 전화번호 표시)
             tvPopupPhone.text = item.phoneNumber
 
-            // 스팸 여부에 따라 제목과 색상 바꾸기
-            if (item.isSpam) {
-                tvPopupTitle.text = "스팸 의심 번호 감지!"
-                tvPopupTitle.setTextColor(Color.parseColor("#E53935")) // 빨간색
-            } else {
-                tvPopupTitle.text = "안전한 번호입니다"
-                tvPopupTitle.setTextColor(Color.parseColor("#388E3C")) // 초록색
-            }
+            // [UI 변경] 통화 기록 화면에 맞게 버튼 디자인 변경
+            // 7-1. '무시' 버튼 숨기기 (기록 화면에선 필요 없음)
+            btnIgnore.visibility = View.GONE
 
-            // 7. 차단/통화
-            // [기능 1] 차단 버튼 클릭 시
-            btnBlock.setOnClickListener {
-                // 차단 로직은 나중에 구현하고, 우선 메시지만 띄웁니다.
-                android.widget.Toast.makeText(holder.itemView.context, "${item.phoneNumber} 번호를 차단했습니다.", android.widget.Toast.LENGTH_SHORT).show()
-                mAlertDialog.dismiss() // 팝업 닫기
-            }
+            // 7-2. '거절' 버튼을 '통화' 버튼으로 변신시키기
+            btnReject.text = "통화"
+            btnReject.setBackgroundColor(Color.parseColor("#388E3C")) // 초록색
 
-            // [기능 2] 통화 버튼 클릭 시 (실제 전화 앱으로 이동)
-            btnCall.setOnClickListener {
+            // [기능 연결]
+            // 7-3. (구 거절 버튼 -> 현 통화 버튼) 클릭 시 전화 앱 연결
+            btnReject.setOnClickListener {
                 val intent = android.content.Intent(android.content.Intent.ACTION_DIAL).apply {
                     data = android.net.Uri.parse("tel:${item.phoneNumber}")
                 }
                 holder.itemView.context.startActivity(intent)
-                mAlertDialog.dismiss() // 팝업 닫기
+                mAlertDialog.dismiss()
+            }
+
+            // 7-4. 차단 버튼 클릭 시
+            btnBlock.setOnClickListener {
+                android.widget.Toast.makeText(holder.itemView.context, "${item.phoneNumber} 번호를 차단했습니다.", android.widget.Toast.LENGTH_SHORT).show()
+                mAlertDialog.dismiss()
             }
         }
     }
