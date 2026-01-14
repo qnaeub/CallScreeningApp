@@ -104,6 +104,11 @@ class MyCallScreeningService : CallScreeningService() {
         val view = LayoutInflater.from(this).inflate(R.layout.item_call_popup, null)
 
         // 4. 데이터 연결하기 (전화번호 텍스트 넣기)
+        val layoutMain = view.findViewById<android.widget.LinearLayout>(R.id.layout_main)
+        val layoutGuide = view.findViewById<android.widget.LinearLayout>(R.id.layout_guide)
+        val btnGuideGo = view.findViewById<Button>(R.id.btn_guide_go)
+        val btnGuideClose = view.findViewById<Button>(R.id.btn_guide_close)
+
         val tvPhoneNumber = view.findViewById<TextView>(R.id.tv_phone_number)
         val tvInfo = view.findViewById<TextView>(R.id.tv_spam_info) // 검색 결과 띄울 곳
         val etReason = view.findViewById<EditText>(R.id.et_spam_reason) // 사유 입력칸 찾기
@@ -121,38 +126,6 @@ class MyCallScreeningService : CallScreeningService() {
             // 검색 결과가 '광고'나 '스팸'을 포함하면 빨간색으로 강조
             if (searchResult.contains("광고") || searchResult.contains("스팸")) {
                 tvInfo.setTextColor(android.graphics.Color.RED)
-            }
-        }
-
-        // 강제 종료 및 차단 설정 이동 함수
-        fun forceEndCallAndOpenSettings() {
-            try {
-                // 1. 전화 끊기 시도
-                val telecomManager = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    telecomManager.endCall()
-                } else {
-                    // 구버전 호환용 (API 28 미만)
-                    val response = CallResponse.Builder().setDisallowCall(true).setRejectCall(true).build()
-                    respondToCall(callDetails, response)
-                }
-
-                // 2. 번호 복사 & 시스템 차단 설정 열기
-                // (1) 번호 복사
-                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("Blocked Number", phoneNumber)
-                clipboard.setPrimaryClip(clip)
-                Toast.makeText(applicationContext, "번호 복사됨! 차단 목록에 붙여넣으세요.", Toast.LENGTH_LONG).show()
-
-                // (2) 차단 설정 화면 열기
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    val intent = telecomManager.createManageBlockedNumbersIntent()
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // 서비스에서 액티비티 띄울 때 필수
-                    startActivity(intent)
-                }
-
-            } catch (e: Exception) {
-                Log.e("SpamApp", "작업 실패: ${e.message}")
             }
         }
 
@@ -202,10 +175,43 @@ class MyCallScreeningService : CallScreeningService() {
             val reason = etReason.text.toString()
             reportSpam(phoneNumber, reason) // DB 저장
 
-            forceEndCallAndOpenSettings() // 끊고 설정 화면 이동
+            // 전화 끊기 (거절)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val tm = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+                try { tm.endCall() } catch (e: Exception) {}
+            } else {
+                val response = CallResponse.Builder().setDisallowCall(true).setRejectCall(true).build()
+                respondToCall(callDetails, response)
+            }
 
+            // 스팸 번호 복사
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("Blocked Number", phoneNumber)
+            clipboard.setPrimaryClip(clip)
+
+            // 바로 이동하지 않고 안내 화면 보여주기!
+            layoutMain.visibility = android.view.View.GONE
+            layoutGuide.visibility = android.view.View.VISIBLE
+        }
+
+        // 안내 화면의 '설정으로 이동하기' 버튼
+        btnGuideGo.setOnClickListener {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    val tm = getSystemService(Context.TELECOM_SERVICE) as TelecomManager
+                    val intent = tm.createManageBlockedNumbersIntent()
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                }
+            } catch (e: Exception) {
+                Log.e("SpamApp", "설정 이동 실패: ${e.message}")
+            }
+            windowManager.removeView(view) // 이동하면서 팝업 닫기
+        }
+
+        // 안내 화면의 '닫기' 버튼 (설정 이동 안 함)
+        btnGuideClose.setOnClickListener {
             windowManager.removeView(view)
-            Toast.makeText(applicationContext, "차단 및 신고를 완료했습니다.", Toast.LENGTH_SHORT).show()
         }
 
         // 7. 최종적으로 화면에 추가!
