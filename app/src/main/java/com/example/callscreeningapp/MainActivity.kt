@@ -14,7 +14,7 @@ class MainActivity : AppCompatActivity() {
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
 
         // 2. 가짜 데이터(Mock Data) 만들기 - 테스트용
-        val dummyList = listOf(
+        val dummyList = mutableListOf(
             CallLogItem("010-9876-5432", "스팸 의심 (대출)", "방금 전", true),
             CallLogItem("02-1234-5678", "안전 (택배)", "1시간 전", false),
             CallLogItem("070-1111-2222", "스팸 의심 (보이스피싱)", "어제", true),
