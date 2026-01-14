@@ -85,4 +85,4 @@
 
 - [ ] 예외 처리: 네트워크 미연결 시 처리, 권한 거부 시 안내 시나리오.
 ---
-*Created by **이유비** | Contact haha52ns@gmail.com | ![Generic badge](https://img.shields.io/badge/Vibe%20Coding-Gemini-4E88D4?style=flat-square&logo=google-gemini&logoColor=white)*
+*Created by **이유비** | Contact eo2jdkk@gmail.com | ![Generic badge](https://img.shields.io/badge/Vibe%20Coding-Gemini-4E88D4?style=flat-square&logo=google-gemini&logoColor=white)*
