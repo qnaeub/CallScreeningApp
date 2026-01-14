@@ -17,20 +17,24 @@ import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.*
 
+data class SpamCheckResult(val spamInfo: String, val isSpam: Boolean)
+
 class MainActivity : AppCompatActivity() {
-    private val db = Firebase.firestore // DB 인스턴스
+
+    private val db = Firebase.firestore
+    private val spamNumberSet = HashSet<String>() // 스팸 번호를 담아둘 저장소 (검색 속도가 빠른 HashSet 사용)
 
     // 클래스 멤버 변수로 선언 (다른 함수에서도 쓰기 위해)
     private val callLogList = mutableListOf<CallLogItem>()
     private lateinit var adapter: CallLogAdapter
 
     // 데이터베이스 변경을 감지하는 '감시자' 정의
-    private val callLogObserver = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+    private val callLogObserver = object :
+        android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
-            // DB가 변하면 자동으로 이 함수가 실행됩니다.
-            // 여기서 데이터를 다시 불러옵니다!
-            loadRealCallLogs()
+            // DB 변경 시에도 스팸 리스트 갱신 후 로그 로드
+            fetchSpamListAndLoadLogs()
         }
     }
 
@@ -58,6 +62,25 @@ class MainActivity : AppCompatActivity() {
                 arrayOf(Manifest.permission.READ_CALL_LOG), 100
             )
         }
+    }
+
+    // 스팸 리스트 가져오기
+    private fun fetchSpamListAndLoadLogs() {
+        db.collection("spam_numbers")
+            .get()
+            .addOnSuccessListener { result ->
+                spamNumberSet.clear() // 기존 목록 비우기
+                for (document in result) {
+                    // 문서 ID가 곧 전화번호라고 가정 (저장할 때 그렇게 만들었으므로)
+                    spamNumberSet.add(document.id)
+                }
+                // 스팸 목록 로딩이 끝나면 -> 통화 기록을 불러온다!
+                loadRealCallLogs()
+            }
+            .addOnFailureListener {
+                // 인터넷이 안 되거나 에러가 나도 통화 기록은 보여줘야 함
+                loadRealCallLogs()
+            }
     }
 
     // 실제 통화 기록 불러오는 함수
@@ -89,7 +112,8 @@ class MainActivity : AppCompatActivity() {
                 val dateLong = it.getLong(dateIndex)
 
                 // 날짜 변환 (예: 2024-05-20 14:00)
-                val dateString = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(dateLong))
+                val dateString =
+                    SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(dateLong))
 
                 // 4. 스팸 여부 판단 (여러분이 만든 DB나 로직을 여기에 연결!)
                 // 지금은 예시로 '070'으로 시작하면 스팸으로 간주합니다.
@@ -111,23 +135,23 @@ class MainActivity : AppCompatActivity() {
         adapter.notifyDataSetChanged()
     }
 
-    // 스팸인지 확인하는 함수 (나중에 DB 연동 부분)
-    data class SpamCheckResult(val spamInfo: String, val isSpam: Boolean)
-
+    // 스팸인지 확인하는 함수
     private fun checkSpamDatabase(number: String): SpamCheckResult {
-        // TODO: 나중에 실제 SQLite DB나 서버 API를 통해 확인하는 로직을 넣으세요.
-
-        return if (number.startsWith("070")) {
-            SpamCheckResult("스팸 의심 (광고)", true)
-        } else if (number.startsWith("02")) {
-            SpamCheckResult("일반 전화", false)
+        return if (spamNumberSet.contains(number)) {
+            // 내 DB(spamNumberSet)에 이 번호가 들어있다! -> 스팸
+            SpamCheckResult("신고된 스팸", true)
         } else {
-            SpamCheckResult("휴대전화", false)
+            // 없다 -> 안전
+            SpamCheckResult("일반 전화", false)
         }
     }
 
     // (권한 요청 결과 처리)
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 100 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             loadRealCallLogs() // 권한 허용되면 로드 시작
@@ -140,11 +164,16 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
 
         // 1. 앱이 다시 활성화될 때 리스트 한 번 갱신 (전화하고 돌아왔을 때 즉시 반영)
-        if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CALL_LOG)
-            == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            loadRealCallLogs()
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.READ_CALL_LOG
+            )
+            == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            // 스팸 DB를 먼저 확인하고 로그를 부릅니다.
+            fetchSpamListAndLoadLogs()
 
-            // 2. 감시자 등록 (이제부터 DB를 지켜보고 있어라!)
+            // 감시자 등록 (이제부터 DB를 지켜보고 있어라!)
             contentResolver.registerContentObserver(
                 android.provider.CallLog.Calls.CONTENT_URI,
                 true,
