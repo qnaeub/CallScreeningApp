@@ -12,8 +12,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.*
-import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -22,7 +20,7 @@ data class SpamCheckResult(val spamInfo: String, val isSpam: Boolean)
 class MainActivity : AppCompatActivity() {
 
     private val db = Firebase.firestore
-    private val spamNumberSet = HashSet<String>() // 스팸 번호를 담아둘 저장소 (검색 속도가 빠른 HashSet 사용)
+    private val spamMap = HashMap<String, String>() // 번호와 신고 사유를 함께 저장
 
     // 클래스 멤버 변수로 선언 (다른 함수에서도 쓰기 위해)
     private val callLogList = mutableListOf<CallLogItem>()
@@ -54,7 +52,8 @@ class MainActivity : AppCompatActivity() {
             == PackageManager.PERMISSION_GRANTED
         ) {
             // 권한이 있으면 바로 불러오기
-            loadRealCallLogs()
+            loadRealCallLogs()          // 여기서는 빈 Map으로 로드되고, 아래 fetchSpamListAndLoadLogs가 완료되면 갱신됨
+            fetchSpamListAndLoadLogs()  // 앱 시작 시 DB 데이터를 가져오도록 명시적 호출
         } else {
             // 권한이 없으면 사용자에게 요청
             ActivityCompat.requestPermissions(
@@ -69,10 +68,30 @@ class MainActivity : AppCompatActivity() {
         db.collection("spam_numbers")
             .get()
             .addOnSuccessListener { result ->
-                spamNumberSet.clear() // 기존 목록 비우기
+                spamMap.clear() // [수정] Map 초기화
                 for (document in result) {
-                    // 문서 ID가 곧 전화번호라고 가정 (저장할 때 그렇게 만들었으므로)
-                    spamNumberSet.add(document.id)
+                    // 문서 ID가 곧 전화번호
+                    val phoneNumber = document.id
+
+                    // 데이터를 List<String> 형태로 가져온다 (안전하게 형변환)
+                    val reasonsList = document.get("reasons") as? List<String>
+
+                    // 리스트에서 가장 많이 등장한 사유(최빈값) 찾기
+                    val mostFrequentReason = reasonsList
+                        ?.groupingBy { it }         // 사유별로 그룹을 묶고
+                        ?.eachCount()               // 각 사유가 몇 번 나왔는지 세고
+                        ?.maxByOrNull { it.value }  // 가장 많이 나온 것을 찾아서
+                        ?.key                       // 그 사유의 텍스트를 가져옴
+
+                    // 사유가 없거나, '사유 없음'이라는 텍스트라면 -> '신고된 번호'로 통일
+                    val spamType = if (mostFrequentReason.isNullOrBlank() || mostFrequentReason == "사유 없음") {
+                        "신고된 번호"
+                    } else {
+                        mostFrequentReason  // 그 외에는 최빈 사유로 표시
+                    }
+
+                    // 번호(Key)와 사유(Value)를 Map에 저장
+                    spamMap[phoneNumber] = spamType
                 }
                 // 스팸 목록 로딩이 끝나면 -> 통화 기록을 불러온다!
                 loadRealCallLogs()
@@ -125,7 +144,7 @@ class MainActivity : AppCompatActivity() {
                         phoneNumber = number,
                         date = dateString,
                         isSpam = spamInfo.isSpam, // 빨간색 표시 여부
-                        spamInfo = spamInfo.spamInfo, // "스팸 의심" 등
+                        spamInfo = spamInfo.spamInfo, // 스팸 사유: 대출 광고 등
                     )
                 )
             }
@@ -137,9 +156,11 @@ class MainActivity : AppCompatActivity() {
 
     // 스팸인지 확인하는 함수
     private fun checkSpamDatabase(number: String): SpamCheckResult {
-        return if (spamNumberSet.contains(number)) {
-            // 내 DB(spamNumberSet)에 이 번호가 들어있다! -> 스팸
-            SpamCheckResult("신고된 스팸", true)
+        // Map에 해당 번호 키가 있는지 확인
+        return if (spamMap.containsKey(number)) {
+            // Map에서 저장된 사유를 가져와서 반환
+            val reason = spamMap[number] ?: "신고된 스팸"
+            SpamCheckResult(reason, true)
         } else {
             // 없다 -> 안전
             SpamCheckResult("일반 전화", false)
@@ -154,7 +175,7 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 100 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            loadRealCallLogs() // 권한 허용되면 로드 시작
+            fetchSpamListAndLoadLogs()  // 권한 허용 시 DB 먼저 불러오고 로그 로드
         } else {
             Toast.makeText(this, "통화 기록 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
         }

@@ -28,23 +28,35 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
             tvPhoneNumber.text = item.phoneNumber
             tvDate.text = item.date
 
+            // isSpam 값에 따라 색 결정
+            if (item.isSpam) {
+                // 스팸일 때
+                tvSpamTag.text = "🚨 ${item.spamInfo}"
+
+                // 글자색: 빨간색 (#E53935)
+                tvPhoneNumber.setTextColor(Color.parseColor("#E53935"))
+                tvSpamTag.setTextColor(Color.parseColor("#E53935"))
+
+                // 태그 배경색: 연한 빨간색 (#FFEBEE)
+                // background가 null이 아닐 때만 색조(tint)를 입힌다.
+                tvSpamTag.background?.setTint(Color.parseColor("#FFEBEE"))
+            } else {
+                // 스팸이 아닐 때
+                tvSpamTag.text = item.spamInfo
+
+                // 글자색: 검은색 (#333333) & 태그색: 진한 초록색 (#2E7D32)
+                tvPhoneNumber.setTextColor(Color.parseColor("#333333"))
+                tvSpamTag.setTextColor(Color.parseColor("#2E7D32"))
+
+                // 태그 배경색: 연한 초록색 (#E8F5E9)
+                tvSpamTag.background?.setTint(Color.parseColor("#E8F5E9"))
+            }
+
             // spamInfo가 있으면 태그 보이기, 없으면 숨기기
             if (!item.spamInfo.isNullOrEmpty()) {
-                tvSpamTag.text = item.spamInfo
                 tvSpamTag.visibility = View.VISIBLE
             } else {
                 tvSpamTag.visibility = View.GONE
-            }
-
-            // isSpam 값에 따라 색 결정
-            if (item.isSpam) {
-                // 스팸일 때: 빨간색 (#E53935)
-                tvPhoneNumber.setTextColor(Color.parseColor("#E53935"))
-                tvSpamTag.setTextColor(Color.parseColor("#E53935"))
-            } else {
-                // 스팸이 아닐 때: 검은색/진회색 (#333333)
-                tvPhoneNumber.setTextColor(Color.parseColor("#333333"))
-                tvSpamTag.setTextColor(Color.parseColor("#333333"))
             }
         }
     }
@@ -114,10 +126,10 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
 
             // 스팸 여부 UI 표시
             if (item.isSpam) {
-                tvPopupTitle.text = "스팸 의심 번호 감지!"
+                tvPopupTitle.text = "🚨 스팸 의심 번호 감지!"
                 tvPopupTitle.setTextColor(Color.parseColor("#E53935"))
             } else {
-                tvPopupTitle.text = "안전한 번호입니다"
+                tvPopupTitle.text = "✅ 안전한 번호입니다"
                 tvPopupTitle.setTextColor(Color.parseColor("#388E3C"))
             }
 
