@@ -27,36 +27,40 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
         fun bind(item: CallLogItem) {
             tvPhoneNumber.text = item.phoneNumber
             tvDate.text = item.date
+            tvSpamTag.text = item.spamInfo
 
-            // isSpam 값에 따라 색 결정
-            if (item.isSpam) {
-                // 스팸일 때
-                tvSpamTag.text = "🚨 ${item.spamInfo}"
+            // 뷰가 재사용되므로, 일단 취소선 효과를 초기화(제거)하고 시작
+            tvPhoneNumber.paintFlags = tvPhoneNumber.paintFlags and android.graphics.Paint.STRIKE_THRU_TEXT_FLAG.inv()
 
-                // 글자색: 빨간색 (#E53935)
-                tvPhoneNumber.setTextColor(Color.parseColor("#E53935"))
-                tvSpamTag.setTextColor(Color.parseColor("#E53935"))
+            // Enum 상태(CallType)에 따라 디자인 분기
+            when (item.type) {
+                CallType.SPAM -> {
+                    // [스팸] 빨간색
+                    tvPhoneNumber.setTextColor(Color.parseColor("#E53935")) // Red
+                    tvSpamTag.setTextColor(Color.parseColor("#E53935"))
+                    tvSpamTag.background?.setTint(Color.parseColor("#FFEBEE")) // Light Red
+                    tvSpamTag.visibility = View.VISIBLE
+                }
+                CallType.BLOCKED -> {
+                    // [차단됨] 연한 회색 + 취소선
+                    tvPhoneNumber.setTextColor(Color.parseColor("#9E9E9E")) // 더 연한 회색
 
-                // 태그 배경색: 연한 빨간색 (#FFEBEE)
-                // background가 null이 아닐 때만 색조(tint)를 입힌다.
-                tvSpamTag.background?.setTint(Color.parseColor("#FFEBEE"))
-            } else {
-                // 스팸이 아닐 때
-                tvSpamTag.text = item.spamInfo
+                    // 글자에 취소선 긋기 (가운데 줄)
+                    tvPhoneNumber.paintFlags = tvPhoneNumber.paintFlags or android.graphics.Paint.STRIKE_THRU_TEXT_FLAG
 
-                // 글자색: 검은색 (#333333) & 태그색: 진한 초록색 (#2E7D32)
-                tvPhoneNumber.setTextColor(Color.parseColor("#333333"))
-                tvSpamTag.setTextColor(Color.parseColor("#2E7D32"))
+                    tvSpamTag.setTextColor(Color.parseColor("#757575"))
+                    tvSpamTag.background?.setTint(Color.parseColor("#F5F5F5")) // 아주 연한 회색 배경
+                    tvSpamTag.visibility = View.VISIBLE
+                }
+                CallType.NORMAL -> {
+                    // [일반] 검은색
+                    tvPhoneNumber.setTextColor(Color.parseColor("#212121")) // 진한 검정
+                    tvSpamTag.setTextColor(Color.parseColor("#2E7D32"))
+                    tvSpamTag.background?.setTint(Color.parseColor("#E8F5E9"))
 
-                // 태그 배경색: 연한 초록색 (#E8F5E9)
-                tvSpamTag.background?.setTint(Color.parseColor("#E8F5E9"))
-            }
-
-            // spamInfo가 있으면 태그 보이기, 없으면 숨기기
-            if (!item.spamInfo.isNullOrEmpty()) {
-                tvSpamTag.visibility = View.VISIBLE
-            } else {
-                tvSpamTag.visibility = View.GONE
+                    // 일반 번호 태그 숨김
+                    tvSpamTag.visibility = View.GONE
+                }
             }
         }
     }
@@ -125,7 +129,7 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
             btnReject.setBackgroundColor(Color.parseColor("#388E3C")) // 초록색
 
             // 스팸 여부 UI 표시
-            if (item.isSpam) {
+            if (item.type == CallType.SPAM) {
                 tvPopupTitle.text = "🚨 스팸 의심 번호 감지!"
                 tvPopupTitle.setTextColor(Color.parseColor("#E53935"))
             } else {

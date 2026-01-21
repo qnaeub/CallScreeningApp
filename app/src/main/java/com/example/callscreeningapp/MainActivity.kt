@@ -109,7 +109,8 @@ class MainActivity : AppCompatActivity() {
         // 1. 가져올 컬럼 정의 (전화번호, 날짜)
         val projection = arrayOf(
             CallLog.Calls.NUMBER,
-            CallLog.Calls.DATE
+            CallLog.Calls.DATE,
+            CallLog.Calls.TYPE
         )
 
         // 2. ContentResolver로 쿼리 실행 (최신순 정렬)
@@ -125,26 +126,41 @@ class MainActivity : AppCompatActivity() {
         cursor?.use {
             val numberIndex = it.getColumnIndex(CallLog.Calls.NUMBER)
             val dateIndex = it.getColumnIndex(CallLog.Calls.DATE)
+            val typeIndex = it.getColumnIndex(CallLog.Calls.TYPE)
 
             while (it.moveToNext()) {
                 val number = it.getString(numberIndex)
                 val dateLong = it.getLong(dateIndex)
+                val type = it.getInt(typeIndex)
 
                 // 날짜 변환 (예: 2024-05-20 14:00)
                 val dateString =
                     SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(dateLong))
 
-                // 4. 스팸 여부 판단 (여러분이 만든 DB나 로직을 여기에 연결!)
-                // 지금은 예시로 '070'으로 시작하면 스팸으로 간주합니다.
-                val spamInfo = checkSpamDatabase(number)
+                // 4-1. 스팸 DB 확인
+                val spamCheck = checkSpamDatabase(number)
+
+                // 4-2. 차단 여부 판단 (권한 필요 없는 방법!)
+                // 안드로이드는 차단된 전화일 경우 type에 '6' (BLOCKED_TYPE)을 자동으로 기록해둡니다.
+                val isBlocked = (type == CallLog.Calls.BLOCKED_TYPE)
+
+                // 4-3. 상태(CallType) 결정 로직
+                // 차단됨 -> BLOCKED
+                // 차단 안 됨 & 스팸 DB 있음 -> SPAM
+                // 그 외 -> NORMAL
+                val (finalType, finalTag) = when {
+                    isBlocked -> Pair(CallType.BLOCKED, "⛔ 차단된 번호")
+                    spamCheck.isSpam -> Pair(CallType.SPAM, "🚨 ${spamCheck.spamInfo}")
+                    else -> Pair(CallType.NORMAL, "✅ 안전한 번호") // 혹은 null
+                }
 
                 // 5. 리스트에 추가
                 callLogList.add(
                     CallLogItem(
                         phoneNumber = number,
                         date = dateString,
-                        isSpam = spamInfo.isSpam, // 빨간색 표시 여부
-                        spamInfo = spamInfo.spamInfo, // 스팸 사유: 대출 광고 등
+                        type = finalType,
+                        spamInfo = finalTag
                     )
                 )
             }
