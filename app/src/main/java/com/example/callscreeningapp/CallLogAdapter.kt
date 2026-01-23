@@ -25,7 +25,12 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
         val tvSpamTag: TextView = itemView.findViewById(R.id.tv_spam_tag)
 
         fun bind(item: CallLogItem) {
-            tvPhoneNumber.text = item.phoneNumber
+            // 건수가 1보다 크면 괄호로 표시 (예: 010-1234-5678 (3))
+            if (item.count > 1) {
+                tvPhoneNumber.text = "${item.phoneNumber} (${item.count})"
+            } else {
+                tvPhoneNumber.text = item.phoneNumber
+            }
             tvDate.text = item.date
             tvSpamTag.text = item.spamInfo
 

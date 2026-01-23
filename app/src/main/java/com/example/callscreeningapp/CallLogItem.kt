@@ -8,8 +8,9 @@ enum class CallType {
 }
 
 data class CallLogItem(
-    val phoneNumber: String,  // 전화번호 (예: 010-1234-5678)
+    val phoneNumber: String,  // 전화번호
     val date: String,         // 날짜
     val type: CallType,
-    val spamInfo: String? = null,      // 태그 내용
+    val spamInfo: String? = null,   // 태그 내용
+    val count: Int = 1              //중복된 횟수 저장
 )

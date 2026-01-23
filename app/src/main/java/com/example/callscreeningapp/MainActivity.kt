@@ -106,6 +106,8 @@ class MainActivity : AppCompatActivity() {
     private fun loadRealCallLogs() {
         callLogList.clear() // 기존 데이터 초기화
 
+        val logMap = LinkedHashMap<String, CallLogItem>()
+
         // 1. 가져올 컬럼 정의 (전화번호, 날짜)
         val projection = arrayOf(
             CallLog.Calls.NUMBER,
@@ -130,16 +132,23 @@ class MainActivity : AppCompatActivity() {
 
             while (it.moveToNext()) {
                 val number = it.getString(numberIndex)
+
+                // 이미 처리된 번호인가? (중복 발견)
+                if (logMap.containsKey(number)) {
+                    // 기존 아이템을 가져와서 count만 1 증가시켜서 덮어쓰기
+                    val existingItem = logMap[number]!!
+                    logMap[number] = existingItem.copy(count = existingItem.count + 1)
+                    continue // 다음으로 넘어감 (스팸 체크 등 불필요한 연산 생략)
+                }
+
+                // 처음 등장한 번호 (가장 최신 기록) -> 상세 로직 수행
                 val dateLong = it.getLong(dateIndex)
                 val type = it.getInt(typeIndex)
-
-                // 날짜 변환 (예: 2024-05-20 14:00)
                 val dateString =
                     SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(dateLong))
 
                 // 4-1. 스팸 DB 확인
                 val spamCheck = checkSpamDatabase(number)
-
                 // 4-2. 차단 여부 판단 (권한 필요 없는 방법!)
                 // 안드로이드는 차단된 전화일 경우 type에 '6' (BLOCKED_TYPE)을 자동으로 기록해둡니다.
                 val isBlocked = (type == CallLog.Calls.BLOCKED_TYPE)
@@ -151,21 +160,22 @@ class MainActivity : AppCompatActivity() {
                 val (finalType, finalTag) = when {
                     isBlocked -> Pair(CallType.BLOCKED, "⛔ 차단된 번호")
                     spamCheck.isSpam -> Pair(CallType.SPAM, "🚨 ${spamCheck.spamInfo}")
-                    else -> Pair(CallType.NORMAL, "✅ 안전한 번호") // 혹은 null
+                    else -> Pair(CallType.NORMAL, "✅ 안전한 번호")
                 }
 
                 // 5. 리스트에 추가
-                callLogList.add(
-                    CallLogItem(
+                logMap[number] = CallLogItem(
                         phoneNumber = number,
                         date = dateString,
                         type = finalType,
-                        spamInfo = finalTag
-                    )
+                        spamInfo = finalTag,
+                        count = 1
                 )
             }
         }
 
+        // Map에 저장된 값들만 리스트로 변환
+        callLogList.addAll(logMap.values)
         // 6. 어댑터에 데이터 변경 알림 (화면 갱신)
         adapter.notifyDataSetChanged()
     }
