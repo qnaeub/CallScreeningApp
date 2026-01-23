@@ -36,6 +36,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val PREFS_NAME = "hidden_logs_prefs"
+    private val KEY_HIDDEN_NUMBERS = "hidden_numbers"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -43,7 +46,10 @@ class MainActivity : AppCompatActivity() {
         // RecyclerView & Adapter 설정
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
 
-        adapter = CallLogAdapter(callLogList)
+        adapter = CallLogAdapter(callLogList) { phoneNumber ->
+            addNumberToHiddenList(phoneNumber)
+            Toast.makeText(this, "번호 숨김 저장: $phoneNumber", android.widget.Toast.LENGTH_SHORT).show()
+        }
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this)
 
@@ -60,6 +66,23 @@ class MainActivity : AppCompatActivity() {
                 this,
                 arrayOf(Manifest.permission.READ_CALL_LOG), 100
             )
+        }
+    }
+
+    // 번호를 내부 저장소에 저장하는 함수
+    private fun addNumberToHiddenList(number: String) {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val currentSet = prefs.getStringSet(KEY_HIDDEN_NUMBERS, mutableSetOf()) ?: mutableSetOf()
+
+        // 기존 Set을 복사해서 수정해야 안전함 (SharedPreferences 특성)
+        val newSet = currentSet.toMutableSet()
+        newSet.add(number)
+
+        val success = prefs.edit().putStringSet(KEY_HIDDEN_NUMBERS, newSet).commit()
+
+        // 저장이 성공했는지 로그로 확인 가능
+        if (success) {
+            android.util.Log.d("HideNumber", "숨김 처리 완료: $number (총 ${newSet.size}개)")
         }
     }
 
@@ -106,7 +129,11 @@ class MainActivity : AppCompatActivity() {
     private fun loadRealCallLogs() {
         callLogList.clear() // 기존 데이터 초기화
 
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val hiddenNumbers = prefs.getStringSet(KEY_HIDDEN_NUMBERS, mutableSetOf()) ?: mutableSetOf()
+
         val logMap = LinkedHashMap<String, CallLogItem>()
+        val processedNumbers = HashSet<String>()
 
         // 1. 가져올 컬럼 정의 (전화번호, 날짜)
         val projection = arrayOf(
@@ -132,6 +159,11 @@ class MainActivity : AppCompatActivity() {
 
             while (it.moveToNext()) {
                 val number = it.getString(numberIndex)
+
+                // 숨겨진 번호라면? -> 아예 로드하지 않고 건너뜀
+                if (hiddenNumbers.contains(number)) {
+                    continue
+                }
 
                 // 이미 처리된 번호인가? (중복 발견)
                 if (logMap.containsKey(number)) {

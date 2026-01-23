@@ -14,8 +14,10 @@ import com.google.firebase.ktx.Firebase
 import androidx.recyclerview.widget.RecyclerView
 
 // List -> MutableList로 변경
-class CallLogAdapter(private val items: MutableList<CallLogItem>) :
-    RecyclerView.Adapter<CallLogAdapter.CallLogViewHolder>() {
+class CallLogAdapter(
+    private val items: MutableList<CallLogItem>,
+    private val onDeleteClicked: (String) -> Unit
+) : RecyclerView.Adapter<CallLogAdapter.CallLogViewHolder>() {
 
     inner class CallLogViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvPhoneNumber: TextView = itemView.findViewById(R.id.tv_phone_number)
@@ -67,6 +69,16 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
                     tvSpamTag.visibility = View.GONE
                 }
             }
+
+            // 삭제 버튼 클릭 이벤트
+            btnDelete.setOnClickListener {
+                val currentPos = bindingAdapterPosition
+                if (currentPos != RecyclerView.NO_POSITION) {
+                    onDeleteClicked(item.phoneNumber)
+                    items.removeAt(currentPos)
+                    notifyItemRemoved(currentPos)
+                }
+            }
         }
     }
 
@@ -79,20 +91,6 @@ class CallLogAdapter(private val items: MutableList<CallLogItem>) :
     override fun onBindViewHolder(holder: CallLogViewHolder, position: Int) {
         val item = items[position]
         holder.bind(item)
-
-        // 삭제 버튼 클릭 이벤트
-        // 여기서 'btnDelete'는 아래 ViewHolder에서 찾아놓은 변수 이름입니다.
-        holder.btnDelete.setOnClickListener {
-            // 1. 데이터 리스트에서 현재 위치(position)의 아이템 제거
-            // 주의: 클릭하는 순간의 정확한 위치를 알기 위해 holder.adapterPosition을 쓰는 게 더 안전합니다.
-            val currentPos = holder.bindingAdapterPosition
-
-            if (currentPos != RecyclerView.NO_POSITION) { // 위치가 유효하다면
-                items.removeAt(currentPos)           // 데이터 삭제
-                notifyItemRemoved(currentPos)        // "이 자리 아이템 사라졌어!" 알림
-                //notifyItemRangeChanged(currentPos, items.size) // "나머지 순서 다시 매겨!" 알림
-            }
-        }
 
         // 항목 클릭 시 커스텀 팝업(Dialog) 띄우기
         holder.itemView.setOnClickListener {
